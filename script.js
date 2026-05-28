@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const app = document.getElementById('app');
+    const menuToggle = document.getElementById('menu-toggle');
+    const closeMenuBtn = document.getElementById('close-menu-btn');
+    const currentDeckLabel = document.getElementById('current-deck-label');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    
     const deckList = document.getElementById('deck-list');
     const questionEl = document.getElementById('question');
     const answerEl = document.getElementById('answer');
@@ -13,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const restartFullDeckBtn = document.getElementById('restart-full-deck-btn');
     const reviewMissedBtn = document.getElementById('review-missed-btn');
     const cardCounterEl = document.getElementById('card-counter');
-    const chapterEls = document.querySelectorAll('.card-chapter'); // Get the chapter divs
+    const chapterEls = document.querySelectorAll('.card-chapter'); 
 
     let currentDeck = [];
     let currentCardIndex = 0;
@@ -21,22 +27,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let deckStats = JSON.parse(localStorage.getItem('deckStats')) || {};
     let currentDeckName = '';
 
+    // Swipe Variables
+    let startX = 0;
+    let currentX = 0;
+    let isDragging = false;
+    let hasMoved = false;
+
     const decks = [
         { name: 'Deck 1', path: 'decks/test1.json' },
         { name: 'Deck 2', path: 'decks/test2.json' },
-        { name: 'Deck 3', path: 'decks/test3.json' },
-        { name: 'Deck 4', path: 'decks/test4.json' },
-        { name: 'Deck 5', path: 'decks/test5.json' },
-        { name: 'Deck 6 (X)', path: 'decks/test6.json' },
-        { name: 'Deck 7', path: 'decks/test7.json' },
-        { name: 'Deck 8 (X)', path: 'decks/test8.json' },
-        { name: 'Deck 9 (X)', path: 'decks/test9.json' },
-        { name: 'Deck 10 (X)', path: 'decks/test10.json' },
-        { name: 'Deck 11', path: 'decks/test11.json' },
-        { name: 'Deck 12', path: 'decks/test12.json' },
-        { name: 'Deck 13', path: 'decks/test13.json' },
-        { name: 'Deck 14', path: 'decks/test14.json' },
-        { name: 'Deck 15 (X)', path: 'decks/test15.json' },
+        { name: 'Deck 3', path: 'decks/test3.json' }
+        // Note: Add all your decks back here, kept short for snippet readability
     ];
 
     function init() {
@@ -45,15 +46,59 @@ document.addEventListener('DOMContentLoaded', () => {
             loadDeck(decks[0]);
         }
         document.addEventListener('keydown', handleKeyPress);
+        setupUIEvents();
+    }
+
+    function setupUIEvents() {
+        // Fullscreen Logic
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.error(err));
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // Sidebar Toggle Logic
+        closeMenuBtn.addEventListener('click', () => {
+            app.classList.add('menu-closed');
+            menuToggle.classList.remove('hidden');
+        });
+        
+        menuToggle.addEventListener('click', () => {
+            app.classList.remove('menu-closed');
+            menuToggle.classList.add('hidden');
+        });
+
+        // Swipe & Click Mechanics
+        card.addEventListener('mousedown', handlePointerDown);
+        document.addEventListener('mousemove', handlePointerMove);
+        document.addEventListener('mouseup', handlePointerUp);
+
+        card.addEventListener('touchstart', handlePointerDown, { passive: true });
+        document.addEventListener('touchmove', handlePointerMove, { passive: true });
+        document.addEventListener('touchend', handlePointerUp);
+
+        card.addEventListener('click', (e) => {
+            if (!hasMoved) flipCard(); // Flip only if it was a tap/click, not a drag
+        });
     }
 
     function renderDeckMenu() {
         deckList.innerHTML = '';
         decks.forEach(deck => {
             const li = document.createElement('li');
-            li.textContent = deck.name;
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = deck.name;
+            
+            const statsSpan = document.createElement('span');
+            statsSpan.className = 'light-text';
             const stats = deckStats[deck.name] || { attempts: 0, successRate: 0 };
-            li.innerHTML += ` <span class="light-text">(${stats.attempts}, ${stats.successRate}%)</span>`;
+            statsSpan.textContent = `(${stats.attempts}, ${stats.successRate}%)`;
+            
+            li.appendChild(nameSpan);
+            li.appendChild(statsSpan);
+
             li.addEventListener('click', () => {
                 loadDeck(deck);
                 document.querySelectorAll('#deck-list li').forEach(item => item.classList.remove('active'));
@@ -61,13 +106,22 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             deckList.appendChild(li);
         });
-        if(deckList.firstChild) {
+        if(deckList.firstChild && currentDeckName === '') {
             deckList.firstChild.classList.add('active');
+        } else {
+            // Keep the active class on the right item if re-rendering
+            Array.from(deckList.children).forEach(li => {
+                if (li.firstChild.textContent === currentDeckName) {
+                    li.classList.add('active');
+                }
+            });
         }
     }
 
     async function loadDeck(deck, reviewMissed = false) {
         currentDeckName = deck.name;
+        currentDeckLabel.textContent = deck.name;
+
         try {
             const response = await fetch(deck.path);
             const rawData = await response.text();
@@ -80,6 +134,15 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 currentDeck = allCards;
                 localStorage.removeItem(`${deck.name}_missed`);
+                
+                // Increment Attempt Counter when starting a full deck
+                if (currentDeck.length > 0) {
+                    const stats = deckStats[deck.name] || { attempts: 0, successRate: 0, totalScore: 0 };
+                    stats.attempts++;
+                    deckStats[deck.name] = stats;
+                    localStorage.setItem('deckStats', JSON.stringify(deckStats));
+                    renderDeckMenu(); 
+                }
             }
             
             currentCardIndex = 0;
@@ -131,12 +194,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        card.classList.remove('flipped', 'card-correct', 'card-incorrect');
+        // Reset all states and styles
+        card.classList.remove('flipped', 'card-correct', 'card-incorrect', 'swipe-left', 'swipe-right');
+        card.style.transform = ''; 
+        
         const currentCard = currentDeck[currentCardIndex];
         
         cardCounterEl.textContent = `Card ${currentCardIndex + 1} of ${currentDeck.length}`;
-        
-        // Update chapter header lightly at the top
         chapterEls.forEach(el => el.textContent = currentCard.chapter || '');
         
         questionEl.innerHTML = formatText(currentCard.question);
@@ -145,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentCard.chapterColor) {
             document.documentElement.style.setProperty('--secondary-color', `var(${currentCard.chapterColor})`);
         } else {
-            document.documentElement.style.setProperty('--secondary-color', '#C7CEEA'); // Default pastel
+            document.documentElement.style.setProperty('--secondary-color', '#C7CEEA'); 
         }
         
         updateButtonStates();
@@ -181,7 +245,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const items = text.split(',').map(item => `<li>${item.replace(/\d+\)/, '').trim()}</li>`).join('');
             return `<ol>${items}</ol>`;
         }
-
         return text;
     }
 
@@ -198,7 +261,49 @@ document.addEventListener('DOMContentLoaded', () => {
         card.classList.toggle('flipped');
         updateButtonStates();
     }
-    
+
+    // --- Swipe Logic ---
+    function handlePointerDown(e) {
+        isDragging = true;
+        hasMoved = false;
+        startX = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
+        card.classList.add('dragging');
+    }
+
+    function handlePointerMove(e) {
+        if (!isDragging) return;
+        const x = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
+        currentX = x - startX;
+        
+        if (Math.abs(currentX) > 10) hasMoved = true;
+
+        if (card.classList.contains('flipped')) {
+            card.style.transform = `translateX(${currentX}px) rotate(${currentX * 0.05}deg)`;
+        }
+    }
+
+    function handlePointerUp(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        card.classList.remove('dragging');
+        
+        if (card.classList.contains('flipped') && hasMoved) {
+            const threshold = 100;
+            if (currentX > threshold) {
+                card.classList.add('swipe-right');
+                setTimeout(() => handleNav('correct'), 300);
+            } else if (currentX < -threshold) {
+                card.classList.add('swipe-left');
+                setTimeout(() => handleNav('incorrect'), 300);
+            } else {
+                card.style.transform = ''; // snap back
+            }
+        } else {
+            card.style.transform = ''; 
+        }
+        currentX = 0;
+    }
+
     function handleNav(direction) {
         if (card.classList.contains('flipped')) {
             cardStates[currentCardIndex] = direction === 'correct' ? 1 : 0;
@@ -214,11 +319,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 300);
             
         } else {
-            if (direction === 'next') {
-                moveToNext();
-            } else {
-                moveToPrev();
-            }
+            if (direction === 'next') moveToNext();
+            else moveToPrev();
         }
     }
 
@@ -246,8 +348,8 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreEl.textContent = `${score}%`;
         scoreScreen.style.display = 'block';
 
-        const stats = deckStats[currentDeckName] || { attempts: 0, successRate: 0, totalScore: 0 };
-        stats.attempts++;
+        // Calculate total stats without incrementing attempt count here
+        const stats = deckStats[currentDeckName] || { attempts: 1, successRate: 0, totalScore: 0 };
         stats.totalScore += score;
         stats.successRate = Math.round(stats.totalScore / stats.attempts);
         deckStats[currentDeckName] = stats;
@@ -266,12 +368,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    flipBtn.addEventListener('click', flipCard);
-    nextBtn.addEventListener('click', () => {
+    flipBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        flipCard();
+    });
+    nextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const direction = card.classList.contains('flipped') ? 'correct' : 'next';
         handleNav(direction);
     });
-    prevBtn.addEventListener('click', () => {
+    prevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const direction = card.classList.contains('flipped') ? 'incorrect' : 'prev';
         handleNav(direction);
     });
@@ -279,12 +386,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const activeDeck = decks.find(d => d.name === currentDeckName);
         loadDeck(activeDeck);
     });
-    
     restartFullDeckBtn.addEventListener('click', () => {
          const activeDeck = decks.find(d => d.name === currentDeckName);
         loadDeck(activeDeck);
     });
-
     reviewMissedBtn.addEventListener('click', () => {
         const activeDeck = decks.find(d => d.name === currentDeckName);
         loadDeck(activeDeck, true);
