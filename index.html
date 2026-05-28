@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Cards</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="menu">
+            <h1>Decks</h1>
+            <ul id="deck-list"></ul>
+        </div>
+        <div id="main-content">
+            <div id="card-counter" style="margin-bottom: 10px; font-weight: bold;"></div>
+            <div id="card-container">
+                <div id="card">
+                    <div class="card-face card-front">
+                        <div class="card-chapter light-text"></div>
+                        <div id="question"></div>
+                    </div>
+                    <div class="card-face card-back">
+                        <div class="card-chapter light-text"></div>
+                        <div id="answer"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="controls">
+                <button id="prev-btn">←</button>
+                <button id="flip-btn">Flip</button>
+                <button id="next-btn">→</button>
+            </div>
+            <div id="progress-bar">
+                <div id="progress"></div>
+            </div>
+            <button id="restart-btn">Restart</button>
+            <div id="score-screen">
+                <h2>Deck Complete!</h2>
+                <p>Your score: <span id="score"></span></p>
+                <button id="restart-full-deck-btn">Restart Full Deck</button>
+                <button id="review-missed-btn">Review Missed Questions</button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

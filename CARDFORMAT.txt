@@ -1,0 +1,84 @@
+To create a card deck for the Study Cards app, you need to create a JSON file with a specific format. Each line in the file can be either a chapter heading or a card object.
+
+## File Structure
+
+The file is read line by line. Each line can be one of two things:
+1.  A **Chapter Heading**: A line starting with `#` denotes a new chapter.
+2.  A **Card Object**: A JSON object representing a single card.
+
+### Example:
+```
+# Chapter 1: Basics
+{"question":"What is 1+1?","answer":"2"}
+{"question":"What is the color of the sky?","answer":"Blue"}
+
+# Chapter 2: Advanced
+{"question":"What is the meaning of life?","answer":"42"}
+```
+
+## Card Object
+
+Each card is a JSON object with two required fields: `question` and `answer`.
+
+```json
+{"question":"This is the question.","answer":"This is the answer."}
+```
+
+## Formatting
+
+The app supports special formatting within the `question` and `answer` strings.
+
+### Bold and Italic
+
+-   To make text **bold**, surround it with double asterisks: `**bold text**`
+-   To make text *italic* (and lighter in color), surround it with single asterisks: `*italic text*`
+
+**Example:**
+```json
+{"question":"This is a **bold** question.","answer":"This is an *italic* answer."}
+```
+
+### Answer Count
+
+You can indicate the number of expected answers in a question by adding `(n)` where `n` is a number. This will be styled differently to stand out.
+
+**Example:**
+```json
+{"question":"What are the two most common pets? (2)","answer":"Dogs and Cats"}
+```
+
+### Lists
+
+You can create bulleted or numbered lists in the answer field.
+
+-   **Bulleted Lists**: Start each item with a hyphen `-`. Separate items with a comma.
+-   **Numbered Lists**: Start each item with a number followed by a parenthesis `n)`. Separate items with a comma.
+
+**Important**: The items must be separated by commas.
+
+**Example (Bulleted):**
+```json
+{"question":"Name three primary colors.","answer":"-Red, -Green, -Blue"}
+```
+
+**Example (Numbered):**
+```json
+{"question":"List the first three letters of the alphabet.","answer":"1)A, 2)B, 3)C"}
+```
+
+## Chapters
+
+You can group cards into chapters. Each chapter will have a different background color in the app (cycling through green, blue, and orange).
+
+To start a new chapter, add a line that starts with `#` followed by the chapter name. All cards following this line will belong to this new chapter until another chapter heading is encountered.
+
+**Example:**
+```
+# Chapter 1: Geography
+{"question":"Capital of Japan?","answer":"Tokyo"}
+
+# Chapter 2: Science
+{"question":"Symbol for Gold?","answer":"Au"}
+```
+
+By following this format, you can create your own decks for the Study Cards application.
