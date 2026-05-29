@@ -309,18 +309,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function formatText(text) {
         if(!text) return '';
+        
+        // 1. Hide escaped dashes (\-) by turning them into a temporary placeholder
+        // We use two backslashes (\\) because the backslash itself needs to be escaped in code
+        text = text.replace(/\\-/g, '@@DASH@@');
+
+        // Bold, Italics, and Light Numbers
         text = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
         text = text.replace(/\*(.*?)\*/g, '<i>$1</i>');
         text = text.replace(/\(([\d]+)\)/g, '<span class="light-text">($1)</span>');
 
+        // Bullet Lists
         if (text.includes('-')) {
             const items = text.split(',').map(item => `<li>${item.replace('-', '').trim()}</li>`).join('');
-            return `<ul>${items}</ul>`;
+            text = `<ul>${items}</ul>`;
         }
-        if (text.match(/\d+\)/)) {
+        // Numbered Lists
+        else if (text.match(/\d+\)/)) {
             const items = text.split(',').map(item => `<li>${item.replace(/\d+\)/, '').trim()}</li>`).join('');
-            return `<ol>${items}</ol>`;
+            text = `<ol>${items}</ol>`;
         }
+
+        // 2. Bring the regular dashes back! Replace the placeholder with just "-"
+        text = text.replace(/@@DASH@@/g, '-');
+
         return text;
     }
 
