@@ -35,9 +35,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // REMEMBER TO ADD YOUR OTHER DECKS BACK HERE
     const decks = [
-        { name: 'Deck 1', path: 'decks/test1.json' },
-        { name: 'Deck 2', path: 'decks/test2.json' },
-        { name: 'Deck 3', path: 'decks/test3.json' }
+        { name: 'Test 1', path: 'decks/test1.json' },
+        { name: 'Test 2', path: 'decks/test2.json' },
+        { name: 'Test 3', path: 'decks/test3.json' },
+        { name: 'Test 4', path: 'decks/test4.json' },
+        { name: 'Test 5', path: 'decks/test5.json' },
+        { name: '(x) Test 6', path: 'decks/test6.json' },
+        { name: 'Test 7', path: 'decks/test7.json' },
+        { name: '(x) Test 8', path: 'decks/test8.json' },
+        { name: '(x) Test 9', path: 'decks/test9.json' },
+        { name: '(x) Test 10', path: 'decks/test10.json' },
+        { name: 'Test 11', path: 'decks/test11json' },
+        { name: 'Test 12', path: 'decks/test12.json' },
+        { name: 'Test 13', path: 'decks/test13.json' },
+        { name: 'Test 14', path: 'decks/test14.json' },
+        { name: '(x) Test 15', path: 'decks/test15.json' },
     ];
 
     function init() {
