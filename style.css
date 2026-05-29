@@ -144,6 +144,12 @@ body {
     cursor: pointer; 
     touch-action: none; /* Crucial for swipe to work */
     transition: transform 0.3s ease; 
+
+    user-select: none; 
+    -webkit-user-select: none;
+    -moz-user-select: none;
+
+    border-radius: 10px;
 }
 
 #card.dragging { transition: none; }
@@ -178,7 +184,7 @@ body {
 }
 
 .card-front { display: flex; }
-.card-back { display: none; }
+.card-back { display: none; filter: brightness(0.92) saturate(1.4) hue-rotate(-3deg);}
 #card.flipped .card-front { display: none; }
 #card.flipped .card-back { display: flex; }
 
