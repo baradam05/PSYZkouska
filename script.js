@@ -33,11 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let isDragging = false;
     let hasMoved = false;
 
+    // REMEMBER TO ADD YOUR OTHER DECKS BACK HERE
     const decks = [
         { name: 'Deck 1', path: 'decks/test1.json' },
         { name: 'Deck 2', path: 'decks/test2.json' },
         { name: 'Deck 3', path: 'decks/test3.json' }
-        // Note: Add all your decks back here, kept short for snippet readability
     ];
 
     function init() {
@@ -50,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupUIEvents() {
-        // Fullscreen Logic
         fullscreenBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(err => console.error(err));
@@ -59,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Sidebar Toggle Logic
         closeMenuBtn.addEventListener('click', () => {
             app.classList.add('menu-closed');
             menuToggle.classList.remove('hidden');
@@ -70,18 +68,80 @@ document.addEventListener('DOMContentLoaded', () => {
             menuToggle.classList.add('hidden');
         });
 
-        // Swipe & Click Mechanics
-        card.addEventListener('mousedown', handlePointerDown);
-        document.addEventListener('mousemove', handlePointerMove);
-        document.addEventListener('mouseup', handlePointerUp);
-
-        card.addEventListener('touchstart', handlePointerDown, { passive: true });
-        document.addEventListener('touchmove', handlePointerMove, { passive: true });
-        document.addEventListener('touchend', handlePointerUp);
-
-        card.addEventListener('click', (e) => {
-            if (!hasMoved) flipCard(); // Flip only if it was a tap/click, not a drag
+        // --- ENHANCED SWIPE & DRAG LOGIC ---
+        card.addEventListener('pointerdown', (e) => {
+            isDragging = true;
+            hasMoved = false;
+            startX = e.clientX;
+            card.classList.add('dragging');
+            
+            // CRITICAL FIX: Attach capture to the exact element clicked (fixes the text-click bug)
+            try { e.target.setPointerCapture(e.pointerId); } catch(err) {} 
         });
+
+        card.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            if (!card.classList.contains('flipped')) return;
+
+            currentX = e.clientX - startX;
+            
+            if (Math.abs(currentX) > 10) {
+                hasMoved = true;
+                
+                const rotation = currentX * 0.08; 
+                card.style.transform = `translateX(${currentX}px) rotate(${rotation}deg)`;
+                
+                if (card.classList.contains('flipped')) {
+                    if (currentX > 50) {
+                        nextBtn.style.transform = 'scale(1.15)';
+                        prevBtn.style.transform = 'scale(1)';
+                        card.style.boxShadow = '0 0 0 5px var(--correct-color)'; // Green border
+                    } else if (currentX < -50) {
+                        prevBtn.style.transform = 'scale(1.15)';
+                        nextBtn.style.transform = 'scale(1)';
+                        card.style.boxShadow = '0 0 0 5px var(--incorrect-color)'; // Red border
+                    } else {
+                        nextBtn.style.transform = 'scale(1)';
+                        prevBtn.style.transform = 'scale(1)';
+                        card.style.boxShadow = 'none'; // Remove border in the neutral zone
+                    }
+                }
+            }
+        });
+
+        card.addEventListener('pointerup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            card.classList.remove('dragging');
+            try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
+
+            // Reset button sizes and remove the glow
+            nextBtn.style.transform = 'scale(1)';
+            prevBtn.style.transform = 'scale(1)';
+            card.style.boxShadow = 'none';
+
+            if (!hasMoved) {
+                // It was just a tap, so flip it
+                flipCard();
+            } else if (card.classList.contains('flipped')) {
+                // It was dragged on the back side, check if they swiped far enough
+                const threshold = 100;
+                if (currentX > threshold) {
+                    card.classList.add('swipe-right');
+                    setTimeout(() => handleNav('correct'), 300);
+                } else if (currentX < -threshold) {
+                    card.classList.add('swipe-left');
+                    setTimeout(() => handleNav('incorrect'), 300);
+                } else {
+                    // Didn't drag far enough, snap back to center
+                    card.style.transform = ''; 
+                }
+            }
+            
+            // Reset variables for the next interaction
+            currentX = 0;
+            hasMoved = false; 
+        });     
     }
 
     function renderDeckMenu() {
@@ -109,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(deckList.firstChild && currentDeckName === '') {
             deckList.firstChild.classList.add('active');
         } else {
-            // Keep the active class on the right item if re-rendering
             Array.from(deckList.children).forEach(li => {
                 if (li.firstChild.textContent === currentDeckName) {
                     li.classList.add('active');
@@ -135,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentDeck = allCards;
                 localStorage.removeItem(`${deck.name}_missed`);
                 
-                // Increment Attempt Counter when starting a full deck
                 if (currentDeck.length > 0) {
                     const stats = deckStats[deck.name] || { attempts: 0, successRate: 0, totalScore: 0 };
                     stats.attempts++;
@@ -194,10 +252,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Reset all states and styles
+        // Disable transition temporarily so the new card doesn't "fly back" from off-screen
+        card.style.transition = 'none'; 
         card.classList.remove('flipped', 'card-correct', 'card-incorrect', 'swipe-left', 'swipe-right');
         card.style.transform = ''; 
+        card.style.boxShadow = 'none';
         
+        // Force the browser to register the instant reset before turning animations back on
+        void card.offsetWidth; 
+        card.style.transition = ''; // Re-enable animations
+
         const currentCard = currentDeck[currentCardIndex];
         
         cardCounterEl.textContent = `Card ${currentCardIndex + 1} of ${currentDeck.length}`;
@@ -262,48 +326,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateButtonStates();
     }
 
-    // --- Swipe Logic ---
-    function handlePointerDown(e) {
-        isDragging = true;
-        hasMoved = false;
-        startX = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
-        card.classList.add('dragging');
-    }
-
-    function handlePointerMove(e) {
-        if (!isDragging) return;
-        const x = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
-        currentX = x - startX;
-        
-        if (Math.abs(currentX) > 10) hasMoved = true;
-
-        if (card.classList.contains('flipped')) {
-            card.style.transform = `translateX(${currentX}px) rotate(${currentX * 0.05}deg)`;
-        }
-    }
-
-    function handlePointerUp(e) {
-        if (!isDragging) return;
-        isDragging = false;
-        card.classList.remove('dragging');
-        
-        if (card.classList.contains('flipped') && hasMoved) {
-            const threshold = 100;
-            if (currentX > threshold) {
-                card.classList.add('swipe-right');
-                setTimeout(() => handleNav('correct'), 300);
-            } else if (currentX < -threshold) {
-                card.classList.add('swipe-left');
-                setTimeout(() => handleNav('incorrect'), 300);
-            } else {
-                card.style.transform = ''; // snap back
-            }
-        } else {
-            card.style.transform = ''; 
-        }
-        currentX = 0;
-    }
-
     function handleNav(direction) {
         if (card.classList.contains('flipped')) {
             cardStates[currentCardIndex] = direction === 'correct' ? 1 : 0;
@@ -348,7 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreEl.textContent = `${score}%`;
         scoreScreen.style.display = 'block';
 
-        // Calculate total stats without incrementing attempt count here
         const stats = deckStats[currentDeckName] || { attempts: 1, successRate: 0, totalScore: 0 };
         stats.totalScore += score;
         stats.successRate = Math.round(stats.totalScore / stats.attempts);
