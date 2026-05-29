@@ -7,11 +7,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <button id="fullscreen-btn" title="Toggle Fullscreen">⛶</button>
-    <div id="menu-toggle" class="hidden">
-        <span id="current-deck-label">Deck</span>
-    </div>
-
     <div id="app">
         <div id="menu">
             <div class="menu-header">
@@ -22,6 +17,11 @@
         </div>
         
         <div id="main-content">
+            <div id="top-bar">
+                <button id="menu-toggle" class="hidden">☰ <span id="current-deck-label">Deck</span></button>
+                <button id="fullscreen-btn" title="Toggle Fullscreen">⛶</button>
+            </div>
+
             <div id="card-counter" style="margin-bottom: 10px; font-weight: bold;"></div>
             <div id="card-container">
                 <div id="card">
